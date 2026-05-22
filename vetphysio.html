@@ -540,7 +540,7 @@ body{
 // ══════════════════════════════════════════
 const firebaseConfig = {
   apiKey: "AIzaSyAQPQsDfmvoiqwbC8VHkTpzMiUqwWNfnKU",
-  authDomain: "roottnc.github.io",
+  authDomain: "vetphysio-bdd4c.firebaseapp.com",
   projectId: "vetphysio-bdd4c",
   storageBucket: "vetphysio-bdd4c.firebasestorage.app",
   messagingSenderId: "1060989192013",
@@ -553,7 +553,7 @@ const db   = firebase.firestore();
 
 // ══ ADMIN UID — Sadece bu UID admin paneline erişir ══
 // İlk giriş yaptıktan sonra konsoldan UID'yi al ve buraya yaz
-const ADMIN_UID = "dl5A6jOhzTR1JDDwTt1VoB2jKsQ2"; // ← İlk girişten sonra güncelle
+const ADMIN_UID = "VG2IOZAUHkNxWIrnrv4Wpq0nibX2"; // ← İlk girişten sonra güncelle
 
 // ══════════════════════════════════════════
 // SCREEN YÖNETİMİ
@@ -644,7 +644,45 @@ async function doLogin() {
   btn.disabled = true; btn.textContent = "Giriş yapılıyor…";
   try {
     await auth.signInWithEmailAndPassword(email, pass);
-    // onAuthStateChanged halleder
+
+// 🔥 fallback ui fix
+setTimeout(async () => {
+
+  const user = auth.currentUser;
+
+  if (!user) return;
+
+  const ref = db.collection("users").doc(user.uid);
+  const snap = await ref.get();
+
+  // profil yoksa oluştur
+  if (!snap.exists) {
+
+    await ref.set({
+      uid: user.uid,
+      username: "user_" + user.uid.slice(0,5),
+      fullname: "",
+      email: user.email,
+
+      xp: 0,
+      sessionsPlayed: 0,
+
+      approved: user.uid === ADMIN_UID,
+      role: user.uid === ADMIN_UID ? "admin" : "user",
+
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+
+  }
+
+  // UI FORCE
+  if (user.uid === ADMIN_UID) {
+    showScreen("menu");
+  } else {
+    showScreen("pending");
+  }
+
+}, 350);
   } catch(e) {
     const msgs = { "auth/user-not-found":"Kullanıcı bulunamadı.", "auth/wrong-password":"Şifre yanlış.", "auth/invalid-email":"Geçersiz e-posta.", "auth/too-many-requests":"Çok fazla deneme. Bekle." };
     showAuthErr("login-err", msgs[e.code] || e.message);
@@ -669,11 +707,39 @@ auth.onAuthStateChanged(async (user) => {
     return;
   }
 
-  currentUser = user;
-  // Profili çek
-  const snap = await db.collection("users").doc(user.uid).get();
-  if (!snap.exists) { showScreen("login"); return; }
-  userProfile = snap.data();
+currentUser = user;
+
+// PROFİL REF
+const userRef = db.collection("users").doc(user.uid);
+
+// PROFİLİ ÇEK
+let snap = await userRef.get();
+
+// 🔥 AUTO HEAL PROFILE
+if (!snap.exists) {
+
+  console.log("Eksik profil düzeltildi:", user.uid);
+
+  await userRef.set({
+    uid: user.uid,
+    username: "user_" + user.uid.slice(0,5),
+    fullname: "",
+    email: user.email,
+
+    xp: 0,
+    sessionsPlayed: 0,
+
+    approved: user.uid === ADMIN_UID,
+    role: user.uid === ADMIN_UID ? "admin" : "user",
+
+    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
+
+  // tekrar çek
+  snap = await userRef.get();
+}
+
+userProfile = snap.data();
 
   // Admin UID henüz set edilmediyse ve bu ilk kullanıcıysa konsola yaz
   if (ADMIN_UID === "ADMIN_UID_BURAYA") {
