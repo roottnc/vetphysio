@@ -553,7 +553,7 @@ const db   = firebase.firestore();
 
 // ══ ADMIN UID — Sadece bu UID admin paneline erişir ══
 // İlk giriş yaptıktan sonra konsoldan UID'yi al ve buraya yaz
-const ADMIN_UID = "dl5A6jOhzTR1JDDwTt1VoB2jKsQ2"; // ← İlk girişten sonra güncelle
+const ADMIN_UID = "VG2IOZAUHkNxWIrnrv4Wpq0nibX2"; // ← İlk girişten sonra güncelle
 
 // ══════════════════════════════════════════
 // SCREEN YÖNETİMİ
@@ -621,7 +621,7 @@ async function doRegister() {
       email,
       xp: 0,
       sessionsPlayed: 0,
-      approved: false,
+      approved: true,
       role: "user",
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     });
@@ -746,11 +746,6 @@ userProfile = snap.data();
     console.log("🔑 Senin UID'n:", user.uid, "— ADMIN_UID'yi bu değerle güncelle.");
   }
 
-  // Onay kontrolü
-  if (!userProfile.approved && user.uid !== ADMIN_UID) {
-    showScreen("pending");
-    return;
-  }
 
   // Admin ise tab bar'ı göster
   const adminTab = document.getElementById("tab-admin");
@@ -778,9 +773,15 @@ userProfile = snap.data();
     if (barXp) barXp.textContent = "⭐ " + newXp + " XP";
   };
 
-  showScreen("menu");
+showScreen("menu");
+
+setTimeout(() => {
   buildMenu();
-  document.getElementById("tab-bar").classList.add("show");
+
+  const tb = document.getElementById("tab-bar");
+  if (tb) tb.classList.add("show");
+
+}, 100);
 });
 
 // ══════════════════════════════════════════
